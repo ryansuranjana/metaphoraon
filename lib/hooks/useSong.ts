@@ -1,4 +1,6 @@
 import { db } from '../database';
+import { customAlphabet } from 'nanoid/non-secure';
+const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 10);
 
 export const getSongs = async () => {
   const database = await db;
@@ -6,14 +8,23 @@ export const getSongs = async () => {
   return songs;
 };
 
-export const addSong = async (song: any) => {
+export const addSong = async (song: {
+  title: string;
+  url: string | null;
+  local_path: string | null;
+  duration: number;
+  thumbnail: string | null;
+  created_at: number;
+}) => {
   const database = await db;
+  const id = nanoid();
+  console.log('Generated ID:', id);
   const res = await database.runAsync(
     `
         INSERT INTO songs (id, title, url, local_path, duration, thumbnail, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?);
     `,
-    [song.id, song.title, song.url, song.local_path, song.duration, song.thumbnail, song.created_at]
+    [id, song.title, song.url, song.local_path, song.duration, song.thumbnail, song.created_at]
   );
   return res;
 };

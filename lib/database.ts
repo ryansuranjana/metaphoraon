@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 
-export const db = SQLite.openDatabaseAsync('metaphoraon.db');
+export const db = SQLite.openDatabaseAsync('metaphoraon');
 
 export async function initDB() {
   const database = await db;
