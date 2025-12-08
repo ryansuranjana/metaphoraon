@@ -1,69 +1,45 @@
-import { View, Text, ActivityIndicator } from 'react-native';
-import React, { useEffect, useState } from 'react';
-import { addSong, getSongs, removeSong } from '@/lib/hooks/useSong';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { RAPID_API_HOST, RAPID_API_KEY, RAPID_API_URL } from '@/lib/constants';
-import { useSaveMP3 } from '@/lib/hooks/useSaveMP3';
+import { View, FlatList, Pressable } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { getSongs, TSong } from '@/lib/hooks/useSong';
+import { Text } from '@/components/ui/text';
+import { Icon } from '@/components/ui/icon';
+import { Play } from 'lucide-react-native';
+import { useFocusEffect } from 'expo-router';
 
 const HomeScreen = () => {
-  const [tiktokUrl, setTiktokUrl] = useState('');
-  const [isLoadingDownload, setIsLoadingDownload] = useState(false);
+  const [songs, setSongs] = useState<TSong[]>([]);
 
-  const handleDownload = async () => {
-    setIsLoadingDownload(true);
-    try {
-      const req = await fetch(`${RAPID_API_URL}${tiktokUrl}`, {
-        method: 'GET',
-        headers: {
-          'x-rapidapi-host': RAPID_API_HOST,
-          'x-rapidapi-key': RAPID_API_KEY,
-        },
+  useFocusEffect(
+    useCallback(() => {
+      getSongs().then((songs) => {
+        setSongs(JSON.parse(JSON.stringify(songs)));
       });
-      const res = await req.json();
-      const playUrl = res?.metadata?.additionalData?.music?.playUrl as string;
-      if (playUrl) {
-        const music = await useSaveMP3(playUrl);
-        console.log('Music saved at:', music);
-
-        const resultSong = await addSong({
-          title: 'Sample Title',
-          url: playUrl,
-          local_path: music.uri || null,
-          duration: 26,
-          thumbnail: null,
-          created_at: Date.now(),
-        });
-
-        console.log('Song added to DB:', resultSong);
-      }
-    } catch (error) {
-      console.error('Download error:', error);
-    } finally {
-      setIsLoadingDownload(false);
-    }
-  };
-
-  useEffect(() => {
-    getSongs().then((songs) => {
-      console.log('Fetched songs:', songs);
-    });
-  }, []);
+    }, [])
+  );
 
   return (
     <View className="p-4">
-      <View className="mb-2">
-        <Label className="mb-2">Link Tiktok URL</Label>
-        <Input value={tiktokUrl} onChangeText={setTiktokUrl} />
-      </View>
-      <Button onPress={handleDownload}>
-        {isLoadingDownload ? (
-          <ActivityIndicator size="small" color="#0000ff" />
-        ) : (
-          <Text>Download</Text>
+      <FlatList
+        data={songs}
+        initialNumToRender={50}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View className="mb-4 flex-row items-center justify-between">
+            <View className="flex-grow flex-row gap-3">
+              <View className="size-14 rounded-sm bg-white"></View>
+              <View className="flex-col justify-between">
+                <Text className="text-sm font-bold">{item.title}</Text>
+                <Text className="text-xs">{item.duration} s</Text>
+              </View>
+            </View>
+            <View className="w-fit">
+              <Pressable>
+                <Icon as={Play} className="size-6 text-white" />
+              </Pressable>
+            </View>
+          </View>
         )}
-      </Button>
+      />
     </View>
   );
 };
