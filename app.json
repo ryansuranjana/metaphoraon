@@ -16,7 +16,10 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.balisolutionbiz.metaphoraon"
+      "bundleIdentifier": "com.balisolutionbiz.metaphoraon",
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"]
+      }
     },
     "android": {
       "edgeToEdgeEnabled": true,
