@@ -15,6 +15,8 @@ interface PlayerState {
 
   activeTrackIndex: number | null;
   activeTrack: TrackItem | null;
+  setActiveTrackIndex: (idx: number | null) => void;
+  setActiveTrack: (track: TrackItem | null) => void;
 }
 
 export const usePlayerStore = create<PlayerState>()(
@@ -34,6 +36,8 @@ export const usePlayerStore = create<PlayerState>()(
       },
       activeTrackIndex: null,
       activeTrack: null,
+      setActiveTrackIndex: (idx) => set({ activeTrackIndex: idx }),
+      setActiveTrack: (track) => set({ activeTrack: track }),
     }),
     {
       name: 'player-storage',

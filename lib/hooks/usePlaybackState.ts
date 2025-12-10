@@ -1,22 +1,12 @@
-import { useEffect, useState } from 'react';
-import TrackPlayer, { State, Event } from 'react-native-track-player';
+import { State, usePlaybackState as useTPPlaybackState } from 'react-native-track-player';
 
-export function usePlaybackState() {
-  const [state, setState] = useState<State | null>(null);
-
-  useEffect(() => {
-    TrackPlayer.getPlaybackState()
-      .then((s) => setState(s.state))
-      .catch(() => {});
-
-    const sub = TrackPlayer.addEventListener(Event.PlaybackState, (evt) => {
-      setState(evt.state);
-    });
-
-    return () => {
-      sub.remove();
-    };
-  }, []);
-
-  return state;
+/**
+ * Thin wrapper around TrackPlayer's built-in hook (as in the reference repo).
+ */
+export function usePlaybackState(): State | null {
+  const state = useTPPlaybackState() as State | { state?: State } | null;
+  if (state && typeof state === 'object' && 'state' in state) {
+    return (state as { state?: State }).state ?? null;
+  }
+  return (state as State) ?? null;
 }

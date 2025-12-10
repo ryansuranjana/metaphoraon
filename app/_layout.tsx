@@ -9,6 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
 import { useEffect } from 'react';
 import TrackPlayer from 'react-native-track-player';
+import { setupPlayer } from '@/lib/player/setupPlayer';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -22,6 +23,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     initDB();
+    setupPlayer();
   }, []);
 
   return (
