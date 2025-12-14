@@ -1,18 +1,19 @@
 import { View, FlatList, Pressable, Alert } from 'react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import TrackPlayer, { State } from 'react-native-track-player';
 import { useFocusEffect } from 'expo-router';
-import { getSongs, TSong } from '@/lib/hooks/useSong';
+import { Swipeable } from 'react-native-gesture-handler';
+import { getSongs, removeSong, TSong } from '@/lib/hooks/useSong';
 import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
-import { Pause, Play, Repeat } from 'lucide-react-native';
+import { Pause, Play, Repeat, Trash2 } from 'lucide-react-native';
 import { usePlaybackState } from '@/lib/hooks/usePlaybackState';
 import { useTrackProgress } from '@/lib/hooks/useTrackProgress';
 import { usePlayerStore } from '@/lib/hooks/usePlayerStore';
 import { useActiveTrack } from '@/lib/hooks/useActiveTrack';
+import { useDeletePathMP3 } from '@/lib/hooks/useDeletePathMP3';
 
 const HomeScreen = () => {
-  const [songs, setSongs] = useState<TSong[]>([]);
   const [playerReady, setPlayerReady] = useState(false);
 
   const { position, duration } = useTrackProgress();
@@ -29,9 +30,10 @@ const HomeScreen = () => {
   useFocusEffect(
     useCallback(() => {
       getSongs().then((songs) => {
-        setSongs(JSON.parse(JSON.stringify(songs)));
+        const playableSongs = (songs as TSong[]).filter((song) => !!song.local_path || !!song.url);
+        setPlaylist(playableSongs);
       });
-    }, [])
+    }, [setPlaylist])
   );
 
   useEffect(() => {
@@ -52,25 +54,18 @@ const HomeScreen = () => {
     })();
   }, []);
 
-  const playableSongs = useMemo(
-    () => songs.filter((song) => !!song.local_path || !!song.url),
-    [songs]
-  );
-
   useEffect(() => {
     if (!playerReady) return;
     (async () => {
       try {
-        setPlaylist(playableSongs);
-
-        if (playableSongs.length === 0) {
+        if (playlist.length === 0) {
           await TrackPlayer.reset();
           setActiveTrack(null);
           setActiveTrackIndex(null);
           return;
         }
 
-        const tracks = playableSongs
+        const tracks = playlist
           .map((song) => {
             const url = song.local_path ?? song.url;
             if (!url) return null;
@@ -99,7 +94,7 @@ const HomeScreen = () => {
         Alert.alert('Unable to sync queue', JSON.stringify(err));
       }
     })();
-  }, [playerReady, playableSongs, setPlaylist, setActiveTrack, setActiveTrackIndex]);
+  }, [playerReady, playlist, setActiveTrack, setActiveTrackIndex]);
 
   useEffect(() => {
     if (!playerReady) return;
@@ -110,7 +105,7 @@ const HomeScreen = () => {
       return;
     }
 
-    const matchingSong = playableSongs[activeTpIndex];
+    const matchingSong = playlist[activeTpIndex];
     if (matchingSong) {
       setActiveTrackIndex(activeTpIndex);
       setActiveTrack(matchingSong);
@@ -126,17 +121,10 @@ const HomeScreen = () => {
         created_at: 0,
       });
     }
-  }, [
-    activeTpIndex,
-    activeTpTrack,
-    playerReady,
-    playableSongs,
-    setActiveTrack,
-    setActiveTrackIndex,
-  ]);
+  }, [activeTpIndex, activeTpTrack, playerReady, playlist, setActiveTrack, setActiveTrackIndex]);
 
   const handlePlayPress = async (item: TSong, index: number) => {
-    if (!playerReady || playableSongs.length === 0) return;
+    if (!playerReady || playlist.length === 0) return;
     try {
       const currentState = await TrackPlayer.getPlaybackState();
       const currentIndex = await TrackPlayer.getActiveTrackIndex();
@@ -171,31 +159,73 @@ const HomeScreen = () => {
     }
   };
 
+  const handleDelete = async (item: TSong, index: number) => {
+    try {
+      await removeSong(item.id);
+
+      // If deleting the currently playing track, stop playback
+      if (activeTrack?.id === item.id) {
+        await TrackPlayer.pause();
+        setActiveTrack(null);
+        setActiveTrackIndex(null);
+      }
+
+      // delete local_path song
+      if (item.local_path) {
+        await useDeletePathMP3(item.local_path);
+      }
+
+      // Reload songs and update playlist
+      const songs = await getSongs();
+      const playableSongs = (songs as TSong[]).filter((song) => !!song.local_path || !!song.url);
+      setPlaylist(playableSongs);
+
+      Alert.alert('Lagu berhasil dihapus');
+    } catch (err) {
+      console.error('Error deleting song:', err);
+      Alert.alert('Error', 'Gagal menghapus lagu');
+    }
+  };
+
+  const renderLeftActions = (item: TSong, index: number) => {
+    return (
+      <View className="mb-4 flex-row items-center justify-start">
+        <Pressable
+          onPress={() => handleDelete(item, index)}
+          className="h-full items-center justify-center rounded-sm bg-red-600 px-6">
+          <Icon as={Trash2} className="size-6 text-white" />
+        </Pressable>
+      </View>
+    );
+  };
+
   const progressPercent = duration ? Math.min((position / duration) * 100, 100) : 0;
   const isPlaying = playbackState === State.Playing;
 
   return (
     <View className="flex-1 bg-black p-4 pb-24">
       <FlatList
-        data={playableSongs}
+        data={playlist}
         initialNumToRender={50}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => (
-          <View className="mb-4 flex-row items-center justify-between">
-            <View className="flex-grow flex-row gap-3">
-              <View className="size-14 rounded-sm bg-white/20" />
-              <View className="flex-col justify-between">
-                <Text className="text-sm font-bold">{item.title}</Text>
-                <Text className="text-xs text-white/70">{item.duration} s</Text>
+          <Swipeable renderLeftActions={() => renderLeftActions(item, index)}>
+            <View className="mb-4 flex-row items-center justify-between bg-black">
+              <View className="flex-grow flex-row gap-3">
+                <View className="size-14 rounded-sm bg-white/20" />
+                <View className="flex-col justify-between">
+                  <Text className="text-sm font-bold">{item.title}</Text>
+                  <Text className="text-xs text-white/70">{item.duration} s</Text>
+                </View>
               </View>
+              <Pressable
+                accessibilityLabel="Play song"
+                onPress={() => handlePlayPress(item, index)}
+                className="rounded-full bg-white/10 p-2">
+                <Icon as={Play} className="size-6 text-white" />
+              </Pressable>
             </View>
-            <Pressable
-              accessibilityLabel="Play song"
-              onPress={() => handlePlayPress(item, index)}
-              className="rounded-full bg-white/10 p-2">
-              <Icon as={Play} className="size-6 text-white" />
-            </Pressable>
-          </View>
+          </Swipeable>
         )}
         ListEmptyComponent={
           <Text className="text-center text-sm text-white/70">Belum ada lagu tersimpan</Text>

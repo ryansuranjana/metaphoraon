@@ -2,7 +2,7 @@ import { View, Text } from 'react-native';
 import React from 'react';
 import { Stack, Tabs } from 'expo-router';
 import { Icon } from '@/components/ui/icon';
-import { DownloadCloud, Home, Music } from 'lucide-react-native';
+import { DownloadCloud, Music } from 'lucide-react-native';
 
 const TabLayout = () => {
   return (
@@ -12,7 +12,7 @@ const TabLayout = () => {
         <Tabs.Screen
           name="index"
           options={{
-            title: 'Music',
+            title: 'Metaphoraon',
             tabBarIcon: ({ color, size }) => <Icon as={Music} color={color} size={size} />,
           }}
         />
