@@ -23,6 +23,7 @@ const DownloadScreen = () => {
         },
       });
       const res = await req.json();
+      console.log('download res', res);
       const playUrl = res?.metadata?.additionalData?.music?.playUrl as string;
       if (playUrl) {
         const music = await useSaveMP3(playUrl);

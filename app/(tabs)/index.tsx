@@ -1,15 +1,13 @@
-import { View, FlatList, Pressable } from 'react-native';
+import { View, FlatList, Pressable, Alert } from 'react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import TrackPlayer, { State } from 'react-native-track-player';
 import { useFocusEffect } from 'expo-router';
-import { getSongs, removeSong, TSong } from '@/lib/hooks/useSong';
+import { getSongs, TSong } from '@/lib/hooks/useSong';
 import { Text } from '@/components/ui/text';
 import { Icon } from '@/components/ui/icon';
-import { Pause, Play, SkipForward } from 'lucide-react-native';
-import { setupPlayer } from '@/lib/player/setupPlayer';
+import { Pause, Play, Repeat } from 'lucide-react-native';
 import { usePlaybackState } from '@/lib/hooks/usePlaybackState';
 import { useTrackProgress } from '@/lib/hooks/useTrackProgress';
-import { playNext } from '@/lib/player/playerControls';
 import { usePlayerStore } from '@/lib/hooks/usePlayerStore';
 import { useActiveTrack } from '@/lib/hooks/useActiveTrack';
 
@@ -23,32 +21,30 @@ const HomeScreen = () => {
   const activeTrack = usePlayerStore((state) => state.activeTrack);
   const setActiveTrack = usePlayerStore((state) => state.setActiveTrack);
   const setActiveTrackIndex = usePlayerStore((state) => state.setActiveTrackIndex);
+  const repeatMode = usePlayerStore((state) => state.repeatMode);
+  const setRepeatMode = usePlayerStore((state) => state.setRepeatMode);
   const playbackState = usePlaybackState();
   const { track: activeTpTrack, index: activeTpIndex } = useActiveTrack();
 
   useFocusEffect(
     useCallback(() => {
       getSongs().then((songs) => {
-        console.log('songs', songs);
         setSongs(JSON.parse(JSON.stringify(songs)));
       });
     }, [])
   );
 
   useEffect(() => {
-    // Check if player is ready by trying to get state
     (async () => {
       try {
         await TrackPlayer.getPlaybackState();
         setPlayerReady(true);
       } catch {
-        // Player not ready yet, wait a bit and try again
         setTimeout(async () => {
           try {
             await TrackPlayer.getPlaybackState();
             setPlayerReady(true);
           } catch {
-            // Still not ready, but continue anyway
             setPlayerReady(true);
           }
         }, 500);
@@ -74,13 +70,11 @@ const HomeScreen = () => {
           return;
         }
 
-        // Build valid tracks with proper URLs
         const tracks = playableSongs
           .map((song) => {
             const url = song.local_path ?? song.url;
             if (!url) return null;
 
-            // Ensure file:// protocol for local paths
             const trackUrl =
               song.local_path && !song.local_path.startsWith('file://')
                 ? `file://${song.local_path}`
@@ -102,7 +96,7 @@ const HomeScreen = () => {
         await TrackPlayer.reset();
         await TrackPlayer.add(tracks);
       } catch (err) {
-        console.warn('Unable to sync queue', err);
+        Alert.alert('Unable to sync queue', JSON.stringify(err));
       }
     })();
   }, [playerReady, playableSongs, setPlaylist, setActiveTrack, setActiveTrackIndex]);
@@ -116,13 +110,11 @@ const HomeScreen = () => {
       return;
     }
 
-    // Find matching song from playableSongs
     const matchingSong = playableSongs[activeTpIndex];
     if (matchingSong) {
       setActiveTrackIndex(activeTpIndex);
       setActiveTrack(matchingSong);
     } else {
-      // Fallback to track data from TrackPlayer
       setActiveTrackIndex(activeTpIndex);
       setActiveTrack({
         id: activeTpTrack.id as string,
@@ -149,17 +141,15 @@ const HomeScreen = () => {
       const currentState = await TrackPlayer.getPlaybackState();
       const currentIndex = await TrackPlayer.getActiveTrackIndex();
 
-      // If clicking the same track that's playing, just toggle play/pause
       if (currentIndex === index && currentState.state === State.Playing) {
         await TrackPlayer.pause();
         return;
       }
 
-      // Otherwise, skip to the track and play
       await TrackPlayer.skip(index);
       await TrackPlayer.play();
     } catch (err) {
-      console.warn('Unable to play track', err);
+      Alert.alert('Unable to play track', JSON.stringify(err));
     }
   };
 
@@ -168,6 +158,16 @@ const HomeScreen = () => {
       await TrackPlayer.pause();
     } else {
       await TrackPlayer.play();
+    }
+  };
+
+  const toggleRepeatMode = async () => {
+    if (repeatMode === 'off') {
+      await setRepeatMode('one');
+    } else if (repeatMode === 'one') {
+      await setRepeatMode('all');
+    } else {
+      await setRepeatMode('off');
     }
   };
 
@@ -229,10 +229,26 @@ const HomeScreen = () => {
               <Icon as={isPlaying ? Pause : Play} className="size-6 text-white" />
             </Pressable>
             <Pressable
-              accessibilityLabel="Next track"
-              onPress={playNext}
-              className="rounded-full bg-white/10 p-2">
-              <Icon as={SkipForward} className="size-6 text-white" />
+              accessibilityLabel={
+                repeatMode === 'off'
+                  ? 'Repeat off'
+                  : repeatMode === 'one'
+                    ? 'Repeat one'
+                    : 'Repeat all'
+              }
+              onPress={toggleRepeatMode}
+              className={`relative rounded-full p-2 ${
+                repeatMode !== 'off' ? 'bg-white/20' : 'bg-white/10'
+              }`}>
+              <Icon
+                as={Repeat}
+                className={`size-6 ${repeatMode !== 'off' ? 'text-white' : 'text-white/70'}`}
+              />
+              {repeatMode === 'one' && (
+                <View className="absolute -right-0.5 -top-0.5 flex size-3 items-center justify-center rounded-full bg-white">
+                  <Text className="text-[8px] font-bold text-black">1</Text>
+                </View>
+              )}
             </Pressable>
           </View>
         </Pressable>
