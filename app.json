@@ -2,7 +2,7 @@
   "expo": {
     "name": "metaphoraon",
     "slug": "metaphoraon",
-    "version": "1.0.0",
+    "version": "25.12.15",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "metaphoraon",
@@ -18,14 +18,24 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.balisolutionbiz.metaphoraon",
       "infoPlist": {
-        "UIBackgroundModes": ["audio"]
-      }
+        "UIBackgroundModes": ["audio", "audio"]
+      },
+      "runtimeVersion": "1.0.0"
     },
     "android": {
       "edgeToEdgeEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ],
+      "runtimeVersion": {
+        "policy": "appVersion"
       }
     },
     "web": {
@@ -64,6 +74,15 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1736388b-f12e-4788-a7f6-4fc39d45a994"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/1736388b-f12e-4788-a7f6-4fc39d45a994"
     }
   }
 }
