@@ -1,4 +1,4 @@
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator, Alert } from 'react-native';
 import React, { useState } from 'react';
 import { RAPID_API_HOST, RAPID_API_KEY, RAPID_API_URL } from '@/lib/constants';
 import { useSaveMP3 } from '@/lib/hooks/useSaveMP3';
@@ -11,6 +11,7 @@ const DownloadScreen = () => {
   const [tiktokUrl, setTiktokUrl] = useState('');
   const [nameSong, setNameSong] = useState('');
   const [isLoadingDownload, setIsLoadingDownload] = useState(false);
+  const [rapidKey, setRapidKey] = useState('');
 
   const handleDownload = async () => {
     setIsLoadingDownload(true);
@@ -19,11 +20,11 @@ const DownloadScreen = () => {
         method: 'GET',
         headers: {
           'x-rapidapi-host': RAPID_API_HOST,
-          'x-rapidapi-key': RAPID_API_KEY,
+          'x-rapidapi-key': rapidKey ? rapidKey : RAPID_API_KEY,
         },
       });
       const res = await req.json();
-      console.log('download res', res);
+
       const playUrl = res?.metadata?.additionalData?.music?.playUrl as string;
       if (playUrl) {
         const music = await useSaveMP3(playUrl);
@@ -39,8 +40,15 @@ const DownloadScreen = () => {
         });
 
         console.log('Song added to DB:', resultSong);
+
+        Alert.alert('Lagu berhasil didownload');
+        setTiktokUrl('');
+        setNameSong('');
+      } else {
+        Alert.alert('Gagal mendownload lagu', JSON.stringify(res));
       }
     } catch (error) {
+      Alert.alert('Gagal mendonwoload lagu', JSON.stringify(error));
       console.error('Download error:', error);
     } finally {
       setIsLoadingDownload(false);
@@ -49,12 +57,16 @@ const DownloadScreen = () => {
   return (
     <View className="p-4">
       <View className="mb-3">
+        <Label className="mb-2">Link Tiktok URL</Label>
+        <Input value={tiktokUrl} onChangeText={setTiktokUrl} />
+      </View>
+      <View className="mb-3">
         <Label className="mb-2">Song Name</Label>
         <Input value={nameSong} onChangeText={setNameSong} placeholder="Enter song name" />
       </View>
       <View className="mb-3">
-        <Label className="mb-2">Link Tiktok URL</Label>
-        <Input value={tiktokUrl} onChangeText={setTiktokUrl} />
+        <Label className="mb-2">Rapid API Key</Label>
+        <Input value={rapidKey} onChangeText={setRapidKey} placeholder="Enter rapid API key" />
       </View>
       <Button onPress={handleDownload}>
         {isLoadingDownload ? (
